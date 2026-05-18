@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reset Password | Shift Report</title>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #f3f7fb;
+      font-family: Arial, sans-serif;
+      color: #00294b;
+    }
+
+    .sr-reset-box {
+      max-width: 420px;
+      margin: 48px auto;
+      background: white;
+      padding: 24px 32px;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    .sr-reset-box h1 {
+      text-align: center;
+      margin: 0 0 12px;
+      font-size: 32px;
+      color: #00294b;
+    }
+
+    .sr-reset-box p {
+      text-align: center;
+      color: #5f7d95;
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+
+    .sr-password-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .sr-password-wrap input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 14px 76px 14px 14px;
+      border: 1px solid #cfdde8;
+      border-radius: 12px;
+      font-size: 16px;
+    }
+
+    .sr-password-wrap button {
+      position: absolute;
+      right: 10px;
+      top: 8px;
+      border: none;
+      background: transparent;
+      color: #5f7d95;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 6px;
+    }
+
+    .sr-submit {
+      width: 100%;
+      padding: 14px;
+      background: #00294b;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .sr-submit:disabled {
+      opacity: 0.6;
+    }
+
+    .sr-message {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .sr-message.success {
+      color: #1d7a38;
+    }
+
+    .sr-message.error {
+      color: #b92926;
+    }
+
+    .sr-debug {
+      margin-top: 12px;
+      font-size: 11px;
+      color: #5f7d95;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="sr-reset-box">
+    <h1>Reset Password</h1>
+
+    <p>
+      Enter a new password for your Shift Report account.
+    </p>
+
+    <div class="sr-password-wrap">
+      <input
+        type="password"
+        id="password"
+        placeholder="New Password"
+      />
+
+      <button
+        type="button"
+        onclick="togglePassword('password', this)"
+      >
+        Show
+      </button>
+    </div>
+
+    <div class="sr-password-wrap">
+      <input
+        type="password"
+        id="confirmPassword"
+        placeholder="Confirm New Password"
+      />
+
+      <button
+        type="button"
+        onclick="togglePassword('confirmPassword', this)"
+      >
+        Show
+      </button>
+    </div>
+
+    <button
+      id="submitButton"
+      class="sr-submit"
+      type="button"
+    >
+      Update Password
+    </button>
+
+    <div id="message" class="sr-message"></div>
+    <div id="debugUrl" class="sr-debug"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    const SUPABASE_URL =
+      'https://hkpmbmnroltkiszawmxv.supabase.co'
+
+    const SUPABASE_ANON_KEY =
+      'PASTE_YOUR_ANON_KEY_HERE'
+
+    const supabaseClient =
+      supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+      )
+
+    const passwordInput =
+      document.getElementById('password')
+
+    const confirmPasswordInput =
+      document.getElementById('confirmPassword')
+
+    const submitButton =
+      document.getElementById('submitButton')
+
+    const message =
+      document.getElementById('message')
+
+    const debugUrl =
+      document.getElementById('debugUrl')
+
+    debugUrl.textContent =
+      'URL: ' + window.location.href
+
+    function showMessage(text, type) {
+      message.textContent = text
+      message.className = 'sr-message ' + type
+    }
+
+    function togglePassword(inputId, button) {
+      const input = document.getElementById(inputId)
+
+      const isHidden =
+        input.type === 'password'
+
+      input.type =
+        isHidden ? 'text' : 'password'
+
+      button.textContent =
+        isHidden ? 'Hide' : 'Show'
+    }
+
+    async function prepareRecoverySession() {
+      const url =
+        new URL(window.location.href)
+
+      const hashParams =
+        new URLSearchParams(
+          window.location.hash.replace('#', '')
+        )
+
+      const code =
+        url.searchParams.get('code')
+
+      const accessToken =
+        hashParams.get('access_token')
+
+      const refreshToken =
+        hashParams.get('refresh_token')
+
+      try {
+
+        if (code) {
+          const { error } =
+            await supabaseClient.auth.exchangeCodeForSession(code)
+
+          if (error) throw error
+
+          showMessage(
+            'Reset link verified. Enter your new password.',
+            'success'
+          )
+
+          return
+        }
+
+        if (accessToken && refreshToken) {
+          const { error } =
+            await supabaseClient.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            })
+
+          if (error) throw error
+
+          showMessage(
+            'Reset link verified. Enter your new password.',
+            'success'
+          )
+
+          return
+        }
+
+        const { data } =
+          await supabaseClient.auth.getSession()
+
+        if (data.session) {
+          showMessage(
+            'Reset session found. Enter your new password.',
+            'success'
+          )
+
+          return
+        }
+
+        showMessage(
+          'No reset session found. Please open this page from the newest password reset email link.',
+          'error'
+        )
+
+      } catch (error) {
+        showMessage(
+          error.message || 'Could not verify reset link.',
+          'error'
+        )
+      }
+    }
+
+    submitButton.addEventListener(
+      'click',
+      async function () {
+
+        const password =
+          passwordInput.value.trim()
+
+        const confirmPassword =
+          confirmPasswordInput.value.trim()
+
+        if (!password || !confirmPassword) {
+          showMessage(
+            'Please complete both password fields.',
+            'error'
+          )
+          return
+        }
+
+        if (password !== confirmPassword) {
+          showMessage(
+            'Passwords do not match.',
+            'error'
+          )
+          return
+        }
+
+        if (password.length < 8) {
+          showMessage(
+            'Password must be at least 8 characters.',
+            'error'
+          )
+          return
+        }
+
+        submitButton.disabled = true
+
+        showMessage(
+          'Updating password...',
+          ''
+        )
+
+        try {
+
+          const { error } =
+            await supabaseClient.auth.updateUser({
+              password: password
+            })
+
+          if (error) throw error
+
+          showMessage(
+            'Password updated successfully. Return to the Shift Report app and sign in with your new password.',
+            'success'
+          )
+
+          passwordInput.value = ''
+          confirmPasswordInput.value = ''
+
+        } catch (error) {
+
+          showMessage(
+            error.message || 'Could not update password.',
+            'error'
+          )
+
+        } finally {
+          submitButton.disabled = false
+        }
+      }
+    )
+
+    prepareRecoverySession()
+  </script>
+
+</body>
+</html>
