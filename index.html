@@ -152,7 +152,6 @@
     </button>
 
     <div id="message" class="sr-message"></div>
-    <div id="debugUrl" class="sr-debug"></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -181,12 +180,6 @@
 
     const message =
       document.getElementById('message')
-
-    const debugUrl =
-      document.getElementById('debugUrl')
-
-    debugUrl.textContent =
-      'URL: ' + window.location.href
 
     function showMessage(text, type) {
       message.textContent = text
